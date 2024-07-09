@@ -1,45 +1,78 @@
-/*  Rui Santos & Sara Santos - Random Nerd Tutorials - https://RandomNerdTutorials.com/esp32-lvgl-ebook/
-    THIS EXAMPLE WAS TESTED WITH THE FOLLOWING HARDWARE:
-    1) ESP32-2432S028R 2.8 inch 240×320 also known as the Cheap Yellow Display (CYD): https://makeradvisor.com/tools/cyd-cheap-yellow-display-esp32-2432s028r/
-      SET UP INSTRUCTIONS: https://RandomNerdTutorials.com/cyd-lvgl/
-    2) REGULAR ESP32 Dev Board + 2.8 inch 240x320 TFT Display: https://makeradvisor.com/tools/2-8-inch-ili9341-tft-240x320/ and https://makeradvisor.com/tools/esp32-dev-board-wi-fi-bluetooth/
-      SET UP INSTRUCTIONS: https://RandomNerdTutorials.com/esp32-tft-lvgl/
-    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files.
-    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+/*  Copyright (c) 2024 Rui Santos & Sara Santos
+    Random Nerd Tutorials - https://RandomNerdTutorials.com/esp32-lvgl-ebook/
 
-    Modified by Chip Fleming on 7 July 2024 to serve as a prototype for touchscreen calibration
+    Original program:  1_9_Touchscreen_Test.ino
+
+    THIS EXAMPLE WAS TESTED WITH THE FOLLOWING HARDWARE:
+    1) ESP32-2432S028R 2.8 inch 240×320 also known as the Cheap Yellow Display (CYD):
+       https://makeradvisor.com/tools/cyd-cheap-yellow-display-esp32-2432s028r/
+       SET UP INSTRUCTIONS: https://RandomNerdTutorials.com/cyd-lvgl/
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+    and associated documentation files.
+
+    The above copyright notice and this permission notice shall be included in all copies
+    or substantial portions of the Software.
+
+    Modified by Robert (Chip) Fleming on 9 July 2024 to serve as a prototype for touchscreen calibration
+
+    Changes from Random Nerds Tutorials' 1_9_Touchscreen_Test.ino are Copyright (c) 2024, Robert F. Fleming III
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+    and associated documentation files (the “Software”), to deal in the Software without restriction,
+    including without limitation the rights to use, copy, modify, merge, publish, distribute,
+    sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+    is furnished to do so, subject to the following conditions:
+
+    You must include the above copyright notice and this permission notice in all copies or substantial
+    portions of the Software.
+
+    THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+    BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
+    AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    This software is based in part on the Texas Instruments, Inc. application note titled:
+    "Calibration in touch-screen systems," available at https://www.ti.com/lit/an/slyt277/slyt277.pdf .
 */
 
 /*  Install the "lvgl" library version 9.X by kisvegabor to interface with the TFT Display - https://lvgl.io/
     *** IMPORTANT: lv_conf.h available on the internet will probably NOT work with the examples available at Random Nerd Tutorials ***
+    *** Ensure the lv_conf.h file is in the ..\library folder, NOT in the ..\library\lvgl folder or a subfolder thereof            ***
     *** YOU MUST USE THE lv_conf.h FILE PROVIDED IN THE LINK BELOW IN ORDER TO USE THE EXAMPLES FROM RANDOM NERD TUTORIALS ***
-    FULL INSTRUCTIONS AVAILABLE ON HOW CONFIGURE THE LIBRARY: https://RandomNerdTutorials.com/cyd-lvgl/ or https://RandomNerdTutorials.com/esp32-tft-lvgl/   */
+    FULL INSTRUCTIONS AVAILABLE ON HOW CONFIGURE THE LIBRARY: https://RandomNerdTutorials.com/cyd-lvgl/ or
+    https://RandomNerdTutorials.com/esp32-tft-lvgl/   */
 #include <lvgl.h>
 
-/*  Install the "TFT_eSPI" library by Bodmer to interface with the TFT Display - https://github.com/Bodmer/TFT_eSPI
+/* Install the "TFT_eSPI" library by Bodmer to interface with the TFT Display - https://github.com/Bodmer/TFT_eSPI
     *** IMPORTANT: User_Setup.h available on the internet will probably NOT work with the examples available at Random Nerd Tutorials ***
     *** YOU MUST USE THE User_Setup.h FILE PROVIDED IN THE LINK BELOW IN ORDER TO USE THE EXAMPLES FROM RANDOM NERD TUTORIALS ***
-    FULL INSTRUCTIONS AVAILABLE ON HOW CONFIGURE THE LIBRARY: https://RandomNerdTutorials.com/cyd-lvgl/ or https://RandomNerdTutorials.com/esp32-tft-lvgl/   */
+    FULL INSTRUCTIONS AVAILABLE ON HOW CONFIGURE THE LIBRARY: https://RandomNerdTutorials.com/cyd-lvgl/ or
+    https://RandomNerdTutorials.com/esp32-tft-lvgl/ */
 #include <TFT_eSPI.h>
 
-// Install the "XPT2046_Touchscreen" library by Paul Stoffregen to use the Touchscreen - https://github.com/PaulStoffregen/XPT2046_Touchscreen - Note: this library doesn't require further configuration
+// Install the "XPT2046_Touchscreen" library by Paul Stoffregen to use the Touchscreen -
+// https://github.com/PaulStoffregen/XPT2046_Touchscreen - Note: this library doesn't require further configuration
 #include <XPT2046_Touchscreen.h>
 
 /* Use the Preferences library to store the touchscreen calibration coefficients */
 #include <Preferences.h>
 Preferences ts_cal_coeffs;
 
+/*  Note:  Basic Linear Algebra library version 5.1 or above is required for ESP32
+    Define either USE_BLA or USE_MATRIX_MATH but not both.                           */
 #define USE_BLA
 #undef USE_MATRIX_MATH
+
+#ifdef USE_BLA
+/* use the Basic Linear Algebra library for TI appnote Equation 7 calculations.
+   Version 5.1 or above of the Basic Linear Algebra library is required.        */
+#include <BasicLinearAlgebra.h
+#endif
 
 #ifdef USE_MATRIX_MATH
 /* use the Matrix Math library for TI appnote Equation 7 calculations. */
 #include <MatrixMath.h>
-#endif
-
-#ifdef USE_BLA
-/* use the Basic Linear Algebra library for TI appnote Equation 7 calculations. */
-#include <BasicLinearAlgebra.h>
 #endif
 
 // Touchscreen pins
@@ -107,15 +140,11 @@ void touchscreen_read_pts(bool, bool, int, int);
 /* Declare function to display a user instruction upon startup */
 void lv_display_instruction(void);
 
-/* Declare function to display crosshair at indexed point */
-void display_crosshair(int);
-
 /* Declare function to display crosshairs at given coordinates */
-void display_crosshairs(int, int);
+void display_crosshair(int, int);
 
 /* Declare function to display 'X's at given coordinates */
 void display_xs(int, int);
-
 
 /* Declare function to compute the resistive touchscreen coordinates to display coordinates conversion coefficients */
 void ts_calibration (
@@ -141,7 +170,7 @@ void gather_cal_data(void) {
   for (int i = 0; i < 6; i++) {
     lv_obj_clean(lv_scr_act());
     //lv_draw_cross(i);
-    display_crosshair(i);
+    display_crosshair(scr_points[i][0], scr_points[i][1]);
 
     reset = true;
     x_avg = 0;
@@ -174,8 +203,6 @@ void gather_cal_data(void) {
 }
 
 void compute_transformation_coefficients(void) {
-  /* finished collecting data, now compute correction coefficients */
-  /* first initialize the function call parameters */
   aT = { ts_points[0][0], ts_points[0][1] };
   bT = { ts_points[1][0], ts_points[1][1] };
   cT = { ts_points[2][0], ts_points[2][1] };
@@ -190,11 +217,13 @@ void compute_transformation_coefficients(void) {
 void check_calibration_results(void) {
   int x_touch, y_touch, x_scr, y_scr, error;
 
-    /* print the stored coefficients to make sure they were actually stored */
+  /* print the stored coefficients to make sure they were actually stored */
   get_ts_cal_coefficients();
-  s = String("Stored X:  alpha = " + String(pref_alphaX, 3) + ", beta = " + String(pref_betaX, 3) + ", delta = " + String(pref_deltaX, 3) );
+  s = String("Stored X:  alpha = " + String(pref_alphaX, 3) + ", beta = " + String(pref_betaX, 3) + ", delta = " +
+      String(pref_deltaX, 3) );
   Serial.println(s);
-  s = String("Stored Y:  alpha = " + String(pref_alphaY, 3) + ", beta = " + String(pref_betaY, 3) + ", delta = " + String(pref_deltaY, 3) );
+  s = String("Stored Y:  alpha = " + String(pref_alphaY, 3) + ", beta = " + String(pref_betaY, 3) + ", delta = " +
+      String(pref_deltaY, 3) );
   Serial.println(s);
 
   /* if we did our job well, the screen points computed below should match
@@ -209,7 +238,7 @@ void check_calibration_results(void) {
     x_scr = alphaX * x_touch + betaX * y_touch + deltaX;
     y_scr = alphaY * x_touch + betaY * y_touch + deltaY;
 
-    display_crosshairs(scr_points[i][0], scr_points[i][1]);
+    display_crosshair(scr_points[i][0], scr_points[i][1]);
     display_xs(x_scr, y_scr);
 
     s = String("x_touch = " + String(x_touch) + " y_touch = " + String(y_touch) );
@@ -219,14 +248,15 @@ void check_calibration_results(void) {
     Serial.println(s);
 
     error = (int) sqrt( sq(x_scr - scr_points[i][0]) + sq(y_scr - scr_points[i][1]) );
-    s = String("error = " + String(error) );
+    s = String("error = " + String(error) + " pixel(s)");
     Serial.println(s);
     Serial.println();
   }
 }
 
 void setup() {
-  String LVGL_Arduino = String("LVGL Library Version: ") + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
+  String LVGL_Arduino = String("LVGL Library Version: ") + lv_version_major() + "." + lv_version_minor() +
+                               "." + lv_version_patch();
   Serial.begin(115200);
   Serial.println(LVGL_Arduino);
   
@@ -239,7 +269,8 @@ void setup() {
   touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
   touchscreen.begin(touchscreenSPI);
   // Set the Touchscreen rotation in landscape mode
-  // Note: in some displays, the touchscreen might be upside down, so you might need to set the rotation to 1: touchscreen.setRotation(1);
+  // Note: in some displays, the touchscreen might be upside down, so you might need to set the rotation to 1:
+    touchscreen.setRotation(1);
   touchscreen.setRotation(3);
 
   // Create a display object
@@ -376,34 +407,8 @@ void lv_display_instruction(void) {
   lv_obj_add_style(text_label, &style_text_label, 0);
 }
 
-// function to display crosshair at given index of coordinates array
-void display_crosshair(int cross_nr) {
-
-  static lv_point_precise_t h_line_points[] = { {0, 0}, {10, 0} };
-  static lv_point_precise_t v_line_points[] = { {0, 0}, {0, 10} };
-
-  static lv_style_t style_line;
-  lv_style_init(&style_line);
-  lv_style_set_line_width(&style_line, 2);
-  lv_style_set_line_color(&style_line, lv_palette_main(LV_PALETTE_YELLOW));
-  lv_style_set_line_rounded(&style_line, true);
-
-  // Create crosshair lines
-  lv_obj_t* crosshair_h = lv_line_create(lv_screen_active());
-  lv_obj_t* crosshair_v = lv_line_create(lv_screen_active());
-
-  lv_line_set_points(crosshair_h, h_line_points, 2); // Set the coordinates for the crosshair_h line
-  lv_obj_add_style(crosshair_h, &style_line, 0);
-
-  lv_line_set_points(crosshair_v, v_line_points, 2); // Set the coordinates for the crosshair_h line
-  lv_obj_add_style(crosshair_v, &style_line, 0);
-
-  lv_obj_set_pos(crosshair_h, scr_points[cross_nr][0] - 5, scr_points[cross_nr][1]);
-  lv_obj_set_pos(crosshair_v, scr_points[cross_nr][0], scr_points[cross_nr][1] - 5);
-}
-
 /* function to display crosshairs at given coordinates */
-void display_crosshairs(int x, int y) {
+void display_crosshair(int x, int y) {
 
   static lv_point_precise_t h_line_points[] = { {0, 0}, {10, 0} };
   static lv_point_precise_t v_line_points[] = { {0, 0}, {0, 10} };
@@ -470,30 +475,6 @@ void ts_calibration (
 	bool defined;
 	uint16_t screenWidth, screenHeight;
 
-#ifdef USE_MATRIX_MATH
-  mtx_type A[6][3];
-  mtx_type A_t[3][6];
-  mtx_type A_tA[3][3];
-  mtx_type A_tA_save[3][3];
-  mtx_type Inv_Test[3][3];
-  mtx_type At_A_inv_A_t[3][3];
-  mtx_type X[6];
-  mtx_type Y[6];
-  mtx_type X_coeff[3];
-  mtx_type Y_coeff[3];
-#endif
-
-#ifdef USE_BLA
-  BLA::Matrix<6, 3> A;
-  BLA::Matrix<3, 6> transA;
-  BLA::Matrix<6> X;
-  BLA::Matrix<6> Y;
-  BLA::Matrix<3, 3> B;
-  BLA::Matrix<3, 6> C;
-  BLA::Matrix<3> X_coeff;
-  BLA::Matrix<3> Y_coeff;
-#endif
-
   s = String("aS = " + String(aS.x) + ", " + String(aS.y));
   Serial.println(s);
   s = String("bS = " + String(bS.x) + ", " + String(bS.y));
@@ -534,7 +515,80 @@ void ts_calibration (
   faT.x = (float)aT.x; fbT.x = (float)bT.x; fcT.x = (float)cT.x; fdT.x = (float)dT.x; feT.x = (float)eT.x; ffT.x = (float)fT.x;
   faT.y = (float)aT.y; fbT.y = (float)bT.y; fcT.y = (float)cT.y; fdT.y = (float)dT.y; feT.y = (float)eT.y; ffT.y = (float)fT.y;
 
+#ifdef USE_BLA
+  BLA::Matrix<6, 3> A;
+  BLA::Matrix<3, 6> transA;
+  BLA::Matrix<6> X;
+  BLA::Matrix<6> Y;
+  BLA::Matrix<3, 3> B;
+  BLA::Matrix<3, 6> C;
+  BLA::Matrix<3> X_coeff;
+  BLA::Matrix<3> Y_coeff;
+
+  A = { faT.x, faT.y, 1,
+        fbT.x, fbT.y, 1,
+        fcT.x, fcT.y, 1,
+        fdT.x, fdT.y, 1,
+        feT.x, feT.y, 1,             
+        ffT.x, ffT.y, 1 };
+
+X = { faS.x,
+      fbS.x,
+      fcS.x,
+      fdS.x,
+      feS.x,
+      ffS.x };
+
+Y = { faS.y,
+      fbS.y,
+      fcS.y,
+      fdS.y,
+      feS.y,
+      ffS.y };
+
+  /* Now compute [AtA]^-1 * AtA * X and [AtA]^-1 * AtA * Y */
+  Serial.print ("A = ");
+  Serial.println(A);
+
+  transA = ~A;
+  Serial.print ("transA = ");
+  Serial.println(transA);
+
+  B = transA * A;
+  Serial.print ("Before inversion, B = ");
+  Serial.println(B);
+
+  if (!Invert(B) ) {
+    Serial.println("Singular matrix in computation of inverse of B = transA*A!");
+  }
+  Serial.print ("After inversion, B = ");
+  Serial.println(B);
+
+  C = B * transA;
+  Serial.print ("C = ");
+  Serial.println(C);
+
+  X_coeff = C * X;
+  Y_coeff = C * Y;
+
+  /* transfer the X and Y coefficients to the Greek-letter variables
+     Note that BLA requires round brackets while MatrixMath requires square ones */
+  alphaX = X_coeff(0); betaX = X_coeff(1); deltaX = X_coeff(2);
+  alphaY = Y_coeff(0); betaY = Y_coeff(1); deltaY = Y_coeff(2);      
+#endif
+
 #ifdef USE_MATRIX_MATH
+  mtx_type A[6][3];
+  mtx_type A_t[3][6];
+  mtx_type A_tA[3][3];
+  mtx_type A_tA_save[3][3];
+  mtx_type Inv_Test[3][3];
+  mtx_type At_A_inv_A_t[3][3];
+  mtx_type X[6];
+  mtx_type Y[6];
+  mtx_type X_coeff[3];
+  mtx_type Y_coeff[3];
+
   /* set up the A matrix and the X and Y vectors per Eq. 6 of the TI appnote */
   A[0][0] = faT.x; A[0][1] = faT.y; A[0][2] = 1;
   A[1][0] = fbT.x; A[1][1] = fbT.y; A[1][2] = 1;
@@ -549,32 +603,7 @@ void ts_calibration (
   X[3] = fdS.x;  Y[3] = fdS.y;
   X[4] = feS.x;  Y[4] = feS.y;
   X[5] = ffS.x;  Y[5] = ffS.y;
-#endif
 
-#ifdef USE_BLA
-  A = { faT.x, faT.y, 1,
-        fbT.x, fbT.y, 1,
-        fcT.x, fcT.y, 1,
-        fdT.x, fdT.y, 1,
-        feT.x, feT.y, 1,             
-        ffT.x, ffT.y, 1 };
-
-  X = { faS.x,
-        fbS.x,
-        fcS.x,
-        fdS.x,
-        feS.x,
-        ffS.x };
-
-  Y = { faS.y,
-        fbS.y,
-        fcS.y,
-        fdS.y,
-        feS.y,
-        ffS.y };
-#endif
-
-#ifdef USE_MATRIX_MATH
 	Matrix.Print((mtx_type*)A, 6, 3, "A");
 
 	Matrix.Print((mtx_type*)X, 6, 1, "X");
@@ -613,40 +642,6 @@ void ts_calibration (
   alphaX = X_coeff[0]; betaX = X_coeff[1]; deltaX = X_coeff[2];
   alphaY = Y_coeff[0]; betaY = Y_coeff[1]; deltaY = Y_coeff[2];  
 #endif
-
-#ifdef USE_BLA
-  /* Now compute [AtA]^-1 * AtA * X and [AtA]^-1 * AtA * Y */
-  Serial.print ("A = ");
-  Serial.println(A);
-
-  transA = ~A;
-  Serial.print ("transA = ");
-  Serial.println(transA);
-
-  B = transA * A;
-  Serial.print ("Before inversion, B = ");
-  Serial.println(B);
-
-  if (!Invert(B) ) {
-    Serial.println("Singular matrix in computation of inverse of B = transA*A!");
-  }
-  Serial.print ("After inversion, B = ");
-  Serial.println(B);
-
-  C = B * transA;
-  Serial.print ("C = ");
-  Serial.println(C);
-
-  X_coeff = C * X;
-  Y_coeff = C * Y;
-
-  /* transfer the X and Y coefficients to the Greek-letter variables
-     Note that BLA requires round brackets while MatrixMath requires square ones */
-  alphaX = X_coeff(0); betaX = X_coeff(1); deltaX = X_coeff(2);
-  alphaY = Y_coeff(0); betaY = Y_coeff(1); deltaY = Y_coeff(2);
-
-#endif
-
 
   Serial.println();
 
