@@ -67,7 +67,7 @@ Preferences ts_cal_coeffs;
 #ifdef USE_BLA
 /* use the Basic Linear Algebra library for TI appnote Equation 7 calculations.
    Version 5.1 or above of the Basic Linear Algebra library is required.        */
-#include <BasicLinearAlgebra.h
+#include <BasicLinearAlgebra.h>
 #endif
 
 #ifdef USE_MATRIX_MATH
@@ -89,8 +89,10 @@ unsigned long delay_start = 0;
 SPIClass touchscreenSPI = SPIClass(VSPI);
 XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
 
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 240
+constexpr int SCREEN_WIDTH = 320;
+constexpr int SCREEN_HEIGHT = 240;
+
+constexpr int SAMPLES_PER_POINT = 128;
 
 String s;
 
@@ -225,6 +227,7 @@ void check_calibration_results(void) {
   s = String("Stored Y:  alpha = " + String(pref_alphaY, 3) + ", beta = " + String(pref_betaY, 3) + ", delta = " +
       String(pref_deltaY, 3) );
   Serial.println(s);
+  Serial.println();
 
   /* if we did our job well, the screen points computed below should match
      aS, bS, and cS defined near the top */
@@ -311,7 +314,7 @@ void loop() {
 void touchscreen_read_pts(bool reset, bool *finished, int *x_avg, int *y_avg) {
   /* nr_samples = samples taken; good_samples = samples used, samples = array of 100 samples */
   static int i, nr_samples, good_samples;
-  static uint32_t samples[100][2];
+  static uint32_t samples[SAMPLES_PER_POINT][2];
 
   /* coordinates to shift and rotate touch screen coordinates to display coordinates */
   static float mean_x, mean_y, filt_mean_x, filt_mean_y, stdev_x, stdev_y;
@@ -336,10 +339,10 @@ void touchscreen_read_pts(bool reset, bool *finished, int *x_avg, int *y_avg) {
     nr_samples++;
 
     /* first compute the x & y averages of all the samples */
-    if (nr_samples >= 100) {
+    if (nr_samples >= SAMPLES_PER_POINT) {
       mean_x = 0;
       mean_y = 0;
-      for (i = 0; i < 100; i++) {
+      for (i = 0; i < SAMPLES_PER_POINT; i++) {
         mean_x += (float)samples[i][0];
         mean_y += (float)samples[i][1];
       }
@@ -351,7 +354,7 @@ void touchscreen_read_pts(bool reset, bool *finished, int *x_avg, int *y_avg) {
       /* now compute the x & y standard deviations of all the samples */
       stdev_x = 0;
       stdev_y = 0;
-      for (i = 0; i < 100; i++) {
+      for (i = 0; i < SAMPLES_PER_POINT; i++) {
         stdev_x += sq((float)samples[i][0] - mean_x);
         stdev_y += sq((float)samples[i][1] - mean_y);
       }
@@ -366,7 +369,7 @@ void touchscreen_read_pts(bool reset, bool *finished, int *x_avg, int *y_avg) {
       good_samples = 0;
       filt_mean_x = 0;
       filt_mean_y = 0;
-      for (i = 0; i < 100; i++) {
+      for (i = 0; i < SAMPLES_PER_POINT; i++) {
         if ((abs((float)samples[i][0] - mean_x) < stdev_x) && (abs((float)samples[i][1] - mean_y) < stdev_y)) {
           filt_mean_x += (float)samples[i][0];
           filt_mean_y += (float)samples[i][1];
