@@ -24,8 +24,8 @@
 // Install the "XPT2046_Touchscreen" library by Paul Stoffregen to use the Touchscreen - https://github.com/PaulStoffregen/XPT2046_Touchscreen - Note: this library doesn't require further configuration
 #include <XPT2046_Touchscreen.h>
 
-/* The following lines were added for retrieval of resistive touchscreen to
-   display coordinate transformation equation coefficients... */
+// The following lines were added for retrieval of resistive touchscreen to
+   display coordinate transformation equation coefficients.
 #include <Preferences.h>
 Preferences ts_cal_coeffs;
 
@@ -47,6 +47,8 @@ XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
 // Touchscreen coordinates: (x, y) and pressure (z)
 int x, y, z;
 
+// The following line was added to declare variables used to compute
+// resistive touchscreen to display coordinates.
 float alphaX, betaX, alphaY, betaY, deltaX, deltaY;
 
 #define DRAW_BUF_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
@@ -66,20 +68,20 @@ void touchscreen_read(lv_indev_t * indev, lv_indev_data_t * data) {
   if(touchscreen.tirqTouched() && touchscreen.touched()) {
     // Get Touchscreen points
     TS_Point p = touchscreen.getPoint();
-    // Calibrate Touchscreen points with map function to the correct width and height
+    // Calibrate Touchscreen points with map function to the correct width and height (RNT method)
     //x = map(p.x, 200, 3700, 1, SCREEN_WIDTH);
     //y = map(p.y, 240, 3800, 1, SCREEN_HEIGHT);
 
-    /* The following six lines of code (ignoring whitespace and comments) were
-       added for conversion of resistive touchscreen coordinates to display coordinates */
-    /* first, transform the x coordinate */
+    // The following six lines of code (ignoring whitespace and comments) were
+    // added for conversion of resistive touchscreen coordinates to display coordinates
+    // first, transform the x coordinate
     x = alphaX * p.x + betaX * p.y + deltaX;
 
-    /* clamp x between 0 and SCREEN_WIDTH - 1 */
+    //clamp x between 0 and SCREEN_WIDTH - 1
     x = max(0, x);
     x = min(SCREEN_WIDTH - 1, x);
 
-    /* transform y and clamp it between 0 and SCREEN_HEIGHT - 1 */
+    // transform y and clamp it between 0 and SCREEN_HEIGHT - 1
     y = alphaY * p.x + betaY * p.y + deltaY;
     y = max(0, y);
     y = min(SCREEN_HEIGHT - 1, y); 
@@ -121,8 +123,8 @@ void lv_create_main_gui(void) {
   lv_obj_add_style(text_label_touch, &style_text_label, 0); 
 }
 
-/* The following function was added to retrieve the resistive touchscreen to display coordinate
-   transform equation coefficients from non-volatile storage...                                 */
+// The following function was added to retrieve the resistive touchscreen to display coordinate
+// transform equation coefficients from non-volatile storage.
 void get_ts_cal_coefficients(void) {
   /* start the NVS storage functionality in read-only mode */
   if ( !ts_cal_coeffs.begin("ts_cal_coeff_ns", true) ) {
@@ -156,9 +158,10 @@ void setup() {
   // Note: in some displays, the touchscreen might be upside down, so you might need to set the rotation to 1: touchscreen.setRotation(1);
   touchscreen.setRotation(3);
 
-  /* get the resistive touchscreen to display coordinates conversion coefficients */
+  // The following lines were added to retrieve and print coefficients used to compute
+  // resistive touchscreen to display coordinates.
+  // Get the resistive touchscreen to display coordinates conversion coefficients
   get_ts_cal_coefficients();
-
   s = String("X:  alpha = " + String(alphaX, 3) + ", beta = " + String(betaX, 3) + ", delta = " + String(deltaX, 3) );
   Serial.println(s);
   s = String("Y:  alpha = " + String(alphaY, 3) + ", beta = " + String(betaY, 3) + ", delta = " + String(deltaY, 3) );
